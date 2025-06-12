@@ -6,17 +6,23 @@ using System.IO;
 public class CameraAppManager : MonoBehaviour
 {
     [Header("Camera Settings")]
-    public Camera virtualCamera; // Assign a secondary camera in the scene
+    public Camera backCamera; // Assign a secondary camera in the scene
+    public Camera frontCamera; // Assign a secondary camera in the scene
+    private Camera activeCamera;
     public RenderTexture renderTexture; // Linked to RawImage texture
     public RawImage cameraViewUI; // UI Display Panel
 
     [Header("Capture Button")]
     public Button captureButton;
+    public Button switchCameraButton;
     public AudioSource clickSound;
 
     private void Start()
     {
+        activeCamera = backCamera;
+        SetActiveCamera(activeCamera);
         captureButton.onClick.AddListener(CapturePhoto);
+        switchCameraButton.onClick.AddListener(SwitchCamera);
     }
 
     public void OpenCameraView()
@@ -29,10 +35,34 @@ public class CameraAppManager : MonoBehaviour
         cameraViewUI.gameObject.SetActive(false);
     }
 
+    private void SetActiveCamera(Camera camToActivate)
+    {
+        backCamera.enabled = false;
+        frontCamera.enabled = false;
+
+        activeCamera = camToActivate;
+        activeCamera.enabled = true;
+        activeCamera.targetTexture = renderTexture;
+    }
+
+    public void SwitchCamera()
+    {
+        if (activeCamera == backCamera)
+            SetActiveCamera(frontCamera);
+        else
+            SetActiveCamera(backCamera);
+    }
+
     public void CapturePhoto()
     {
         StartCoroutine(CaptureFromRenderTexture());
     }
+
+    [ContextMenu("Capture Photo")]
+    public void SimulateCapture() => CapturePhoto();
+
+    [ContextMenu("Switch Camera")]
+    public void SimulateSwitch() => SwitchCamera();
 
     IEnumerator CaptureFromRenderTexture()
     {

@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Oculus.Interaction;
 using System.Collections;
+using Oculus.Platform;
 
 public class PalmUIManager : MonoBehaviour
 {
@@ -10,8 +11,6 @@ public class PalmUIManager : MonoBehaviour
 
     [Header("UI Components")]
     [SerializeField] private Canvas palmCanvas;
-    [SerializeField] private RectTransform uiPanel;
-    //[SerializeField] private Button[] appButtons;
     [SerializeField] private GameObject mainUIPanel;
     [SerializeField] private GameObject cameraPanel;
     [SerializeField] private CameraAppManager cameraAppManager;
@@ -21,6 +20,8 @@ public class PalmUIManager : MonoBehaviour
     [SerializeField] private Button cameraBtn;
     [SerializeField] private Button settingsBtn;
     [SerializeField] private Button backBtn;
+    [SerializeField] private GameObject notesPanel;
+    [SerializeField] private NotesAppManager notesAppManager;
 
     [Header("Hand Tracking")]
     [SerializeField] private OVRHand targetHand;
@@ -45,7 +46,9 @@ public class PalmUIManager : MonoBehaviour
         cameraPanel.gameObject.SetActive(false);
         stopSignGesture.WhenSelected += ShowPalmUI;
         stopSignGesture.WhenUnselected += StartHideTimer;
-        //SetupButtons();
+        var avatarSdk = GameObject.FindGameObjectWithTag("avatarmgr");
+        avatarSdk.GetComponent<SampleInputManager>().BodyTrackingMode = Oculus.Avatar2.OvrAvatarBodyTrackingMode.None;
+        avatarSdk.GetComponent<SampleInputManager>().BodyTrackingMode = Oculus.Avatar2.OvrAvatarBodyTrackingMode.Standalone;
 
         messageBtn.onClick.AddListener(() => LaunchApp("Messages"));
         cameraBtn.onClick.AddListener(() => LaunchApp("Camera"));
@@ -134,14 +137,14 @@ public class PalmUIManager : MonoBehaviour
             Vector3 lookDirection = Camera.main.transform.position - palmPos;
             if (targetHand.IsTracked && handSkeleton.IsInitialized && uiAnchor != null)
             {
-                //palmCanvas.transform.position = uiAnchor.position;
-                //palmCanvas.transform.rotation = uiAnchor.rotation;
+                palmCanvas.transform.position = uiAnchor.position;
+                palmCanvas.transform.rotation = uiAnchor.rotation;
                 Transform palm = handSkeleton.Bones[(int)OVRSkeleton.BoneId.Body_LeftHandPalm].Transform;
                 Vector3 uiPos = palm.position + palm.forward * palmOffset;
                 palmCanvas.transform.position = uiPos;
                 palmCanvas.transform.rotation = Quaternion.LookRotation(palm.forward);
             }
-            palmCanvas.transform.rotation = Quaternion.LookRotation(lookDirection) * Quaternion.Euler(0, 180, 0);
+            palmCanvas.transform.rotation = Quaternion.LookRotation(lookDirection) * Quaternion.Euler(-10, 180, 0);
         }
     }
 
@@ -155,7 +158,7 @@ public class PalmUIManager : MonoBehaviour
     //    }
     //}
 
-    void LaunchApp(string appName)
+    public void LaunchApp(string appName)
     {
         Debug.Log($"Launching: {appName}");
         //int index = System.Array.IndexOf(appButtons, appName); //check the appButtons or appNames
@@ -171,8 +174,9 @@ public class PalmUIManager : MonoBehaviour
                 cameraAppManager.OpenCameraView(); // optional
                 break;
             case "Messages":
-            case "Settings":
-                // Add logic for others later
+            case "Notes":
+                notesPanel.SetActive(true);
+                notesAppManager.OpenNotes();
                 break;
         }
         HidePalmUI();
@@ -182,8 +186,27 @@ public class PalmUIManager : MonoBehaviour
     {
         cameraAppManager.CloseCameraView();
         cameraPanel.SetActive(false);
+        notesAppManager.CloseNotes();
         mainUIPanel.SetActive(true);
     }
+
+    [ContextMenu("Open Camera")]
+    public void SimulateOpenCamera() => LaunchApp("Camera");
+
+    [ContextMenu("Back")]
+    public void SimulateBack() => BackToMain();
+
+    [ContextMenu("Capture Photo")]
+    public void SimulateCapture() => cameraAppManager.CapturePhoto();
+
+    [ContextMenu("Switch Camera")]
+    public void SimulateSwitch() => cameraAppManager.SwitchCamera();
+    
+    [ContextMenu("Open Notes")]
+    public void OpenNotes() => notesAppManager.OpenNotes();
+
+    [ContextMenu("Activate Voice")]
+    public void ActivateVoice() => notesAppManager.CloseNotes();
 
     void OnDestroy()
     {
